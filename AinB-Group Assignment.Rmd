@@ -1,0 +1,577 @@
+---
+title: 'AinB Assignment: Group 10'
+author: Joaquin Coitino, Wing Yung Ho, Andrea Iglesias Villegas, Jason Kuilan, Lukas
+  Wolff, Dian Yue Josef Zhu
+date: "12/4/2016"
+output:
+  html_document:
+    code_folding: hide
+    number_sections: yes
+    theme: readable
+    toc: yes
+    toc_float: yes
+  pdf_document:
+    toc: yes
+  word_document:
+    toc: yes
+header-includes: \usepackage{float}
+---
+
+<br>
+<br>
+<p style="border:1.5px; border-style:solid; border-color:#000000; padding: 1em;">This report contains interactive elements and has the best user experience if a web browser is used. Printing is possible. However, will not result in an optimal reading experience. The `R` code used to perform these analyses has been provided as supplementary files, and can be viewed in this report using the _Code_ buttons to toggle code viewing. All files are available on online on Github [here]().</p>
+
+```{r, echo=FALSE, message=FALSE}
+library(AER)
+library(pscl)
+library(MASS)
+library(stargazer)
+library(igraph)
+library(pander)
+library(knitr)
+library(dplyr)
+library(broom)
+```
+
+#Introduction
+
+Before beginning to work in the project, the data was cleaned since some students were voting themselves.
+
+```{r, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r echo=FALSE}
+people <- read.csv("/Users/Josef/Desktop/peoplepickinganonymised.csv", header=TRUE)
+friendship <- subset(people, select = -c(1:3,64:length(people)))
+advice <- subset(people, select = -c(1:63, 124:length(people)))
+creat <- subset(people, select = -c(1:123, 184:length(people)))
+implem <-subset(people, select = -c(1:183, 244:length(people)))
+infl <-subset(people, select = -c(1:243, 304:364))
+```
+
+```{r echo=FALSE}
+colnames(friendship) <- seq(1,60,by=1)
+colnames(creat) <- seq(1,60,by=1)
+colnames(implem) <- seq(1,60,by=1)
+colnames(infl) <- seq(1,60,by=1)
+```
+
+```{r echo=FALSE}
+friendship[row(friendship) == col(friendship)] <- 0
+creat[row(creat) == col(creat)] <- 0
+implem[row(implem) == col(implem)] <- 0
+infl[row(infl) == col(infl)] <- 0
+```
+
+<br />
+Using the 4 CSV, the final peoplepickinganonymisedwoselfvotes.csv was created.
+
+```{r}
+write.csv(friendship, "friendshipmat.csv")
+write.csv(creat, "creatmat.csv")
+write.csv(implem, "implemmat.csv")
+write.csv(infl, "inflmat.csv")
+```
+
+#Regressions
+
+As a starting point, you might like to know how popularity is related to being picked in the other three networks. To assess this, use in-degrees centrality in the Royal Albert hall network as an independent variable in three regressions, one for each of the other teams / networks, where the dependent variable in those regressions will also be in-degrees centrality in those networks. As to estimation, examine the data and select the right estimation method for (e.g., OLS vs. Poisson or negative binomial). Explain your choice of model, submit tables showing your results, and briefly explain what you found. Note: for this task, you are not required to assemble a proper set of controls to rule out alternative explanations; we are only exploring relationships among variables.
+
+__Answer:__
+
+To regress the influence of friendship over individuals’ choices, we must decide between running negative binomial and Poisson models, which are both applicable to count data but the former is not affected by overdispersion.
+
+```{r}
+graduation <- read.csv('/Users/Josef/Desktop/AinB-GroupProject/Question1/peoplepickinganonymisedwoselfvotes.csv', header = TRUE)
+centrality <- data.frame(id = graduation$id, friendcent = NA)
+friendcols <- c( which(colnames(graduation)=='friend_01'):which(colnames(graduation)=='friend_60'))
+advicecols <- c( which(colnames(graduation)=='advice_01'):which(colnames(graduation)=='advice_60'))
+creatcols <- c( which(colnames(graduation)=='creat_01'):which(colnames(graduation)=='creat_60'))
+inflcols <- c( which(colnames(graduation)=='infl_01'):which(colnames(graduation)=='infl_60'))
+implcols <- c( which(colnames(graduation)=='impl_01'):which(colnames(graduation)=='impl_60'))
+
+centrality <- data.frame(id = graduation$id)
+centrality$friendship <- colSums(graduation[friendcols])
+centrality$advice <- colSums(graduation[advicecols])
+centrality$creativity <- colSums(graduation[creatcols])
+centrality$influence <- colSums(graduation[inflcols])
+centrality$implementation <- colSums(graduation[implcols])
+```
+
+<br />
+In order to make this decision, we test for overdispersion (odTest):
+
+```{r}
+creat.model <- glm.nb(creativity ~ friendship, data = centrality)
+infl.model <- glm.nb(influence ~ friendship, data = centrality)
+impl.model <- glm.nb(implementation ~ friendship, data = centrality)
+
+odTest_creat <- odTest(creat.model)
+odTest_infl <- odTest(infl.model)
+odTest_impl <- odTest(impl.model)
+```
+<br />
+*Likelihood ratio test of $H_0$: the restriction of mean = variance in the Poisson model is true*
+
+||Creativity Model|Influence Model|Implementation Model|
+|:------:|:------:|:------:|:------:|
+|P-value|0.004049|2.948 x 10^14|0.0006068|
+
+In all the cases, the test provides evidence of the presence of overdispersion at a 95% significance level, which allows us to prefer the negative binomial models:
+<br />
+<br />
+
+```{r, results='asis', echo = TRUE, fig.align="center"}
+stargazer(creat.model, infl.model, impl.model, header = FALSE, table.placement = "H", type = "html", notes.align = "l")
+```
+
+<br />
+<br />
+All in all, the relationship between the friendship factor and the indegree counts is both positive and statistically significant for all three categories.
+
+
+***
+
+#Cosine Similarity
+Your leaders should show smart flexibility in picking different people for different tasks. To assess this for each team, treat each person’s picks and non-picks for every person in the class as a binary vector for that team, and use cosine similarity to develop a score that represents individual flexibility of picks across the four networks. Explain the score, and provide a table that ranks all IDs by your score; include the ID, the actual score, and a Z-score for your flexibility score
+
+__Answer:__
+
+The cosine similarity was calculated to evaluate the flexibility of potential leaders. The method compares the vector of the friendship choices with the vectors for creativity, influence and implementation. This represents whether someone only picked his friends in all categories or adjusted regarding the task. A high score indicates low flexibility and might be an indicator for missing leadership skills.
+
+<br />
+
+```{r}
+cosine <- read.csv('/Users/Josef/Desktop/AinB-GroupProject/Question2/GroupProjectCosineSimilarityExcelTable.csv', header = TRUE)
+
+cosine_Table<- data.frame(cosine$id, round(cosine$Score,6), cosine$Z_score)
+
+DT::datatable(cosine_Table,
+              colnames = c("ID", "Score", "Z-Score"),
+              caption = "Flexibility Table")
+```
+
+
+***
+
+#Leaders 
+Using the flexibility analysis in problem 1 and any other criteria you want to introduce, pick the three IDs (individuals) you want to have as leaders for the three teams. Again, explain the logic of your scoring, any qualitative considerations you deem important, and of course, your selections.
+
+__Answer:__
+
+__Page Rank__:
+
+After evaluating the pagerank for creativity, influence, and implementation and writing them out as Spreadsheets, we used these to facilitate three Spreadsheets containing:
+
+  + average cosine
+  
+  + average pagerank for each category
+  
+  + average pagerank for the successors
+  
+  + friendship indegree
+  
+  + the cost-benefit ratio.
+
+__Outcome:__
+
+To pick our leaders we decided to use PageRank to evaluate the task specific ability of a person supported by our flexibility score from task 2 to indicate leadership potential. Additionally we considered the friendship in degree if it was extremely high, as it might constrain the decisions for the group members, although we put the focus on the PageRank score. Our final picks for the leaders are:
+
+  + Creativity: 7
+  + Influence: 21
+  + Implementation: 19
+
+
+## Creativity, Influence, Implementation Table {.tabset}
+
+### Creativity Table
+
+```{r, fig.align='centre', eval = T}
+creattable <- read.csv("/Users/Josef/Desktop/AinB-GroupProject/Question3/Creativity Table.csv")
+creat_table <- data.frame(creattable$id, round(creattable$Creativity.Page.Rank,6), round(creattable$Cosine.similarity,6), round(creattable$Overall.Average.Page.Rank.of.Successors,6), round(creattable$Average.Creativity.Page.Rank.Successors,6), round(creattable$Frienship.indegree,6))
+
+
+DT::datatable(creat_table,
+              colnames = c("ID", "Creativity Page Rank", "Cosine similarity",
+                           "Overall Average Page Rank of Successors",
+                           "Average Creativity Page Rank Successors", "Frienship indegree"),
+              caption = "Creativity Table")
+```
+
+### Influence table
+```{r , fig.align = 'centre', eval = T}
+infltable <- read.csv("/Users/Josef/Desktop/AinB-GroupProject/Question3/Influence Table.csv")
+infl_table <- data.frame(infltable$id, round(infltable$Influence.Page.Rank,6), round(infltable$Cosine.similarity,6), round(infltable$Overall.Average.Page.Rank.of.Successors,6), round(infltable$Average.Influence.Page.Rank.Successors,6), round(infltable$Frienship.indegree,6))
+
+
+DT::datatable(infl_table,
+              colnames = c("ID", "Influence Page Rank", "Cosine similarity",
+                           "Overall Average Page Rank of Successors",
+                           "Average Influence Page Rank Successors", "Frienship indegree"),
+              caption = "Influence Table")
+```
+
+### Implementation table
+```{r network_bet, fig.align = 'centre', eval = T}
+impltable <- read.csv("/Users/Josef/Desktop/AinB-GroupProject/Question3/Implementation Table.csv")
+impl_table <- data.frame(impltable$id, round(impltable$Implementation.Page.Rank,6), round(impltable$Cosine.similarity,6), round(impltable$Overall.Average.Page.Rank.of.Successors,6), round(impltable$Average.Implementation.Page.Rank.Successors,6), round(impltable$Frienship.indegree,6))
+
+
+DT::datatable(impl_table,
+              colnames = c("ID", "Impl Page Rank", "Cosine similarity",
+                           "Overall Average Page Rank of Successors",
+                           "Average Impl Page Rank Successors", "Frienship indegree"),
+              caption = "Implementation Table")
+```
+
+
+## Approach:
+
+_Below we provided our code to justify our PageRank calulations:_
+
+Here is the code snippet for friendship:
+```{r friendship}
+friendship <- graduation[,c( which(colnames(graduation)=='friend_01'):which(colnames(graduation)=='friend_60'))]
+mat_friendship <- data.matrix(friendship, rownames.force = NA)
+
+friendship.g <- graph.adjacency(mat_friendship, mode = "directed", weighted = NULL, diag = TRUE, add.colnames = NULL, add.rownames = NA) 
+
+## Ranking advice by a page rank
+page.ranking.friendship <- page.rank(friendship.g, vids=V(friendship.g))
+
+## Sorting the page rank on highest value based on id with top 3 
+sort.friendship <- sort.list(page.ranking.friendship$vector, decreasing = TRUE)
+top3.friendship <- sort.friendship[1:10]
+sorted.f <- page.ranking.friendship$vector[top3.friendship]
+
+#pander(sorted.f,digits = 2)
+```
+
+Here is the code snippet for advice:
+```{r advice}
+advice <- graduation[,c( which(colnames(graduation)=='advice_01'):which(colnames(graduation)=='advice_60'))]
+mat_advice <- data.matrix(advice, rownames.force = NA)
+
+advice.g <- graph.adjacency(mat_advice, mode = "directed", weighted = NULL, diag = TRUE, add.colnames = NULL, add.rownames = NA) 
+
+## Ranking advice by a page rank
+page.ranking.advice <- page.rank(advice.g, vids=V(advice.g))
+
+## Sorting the page rank on highest value based on id with top 3
+sort.advice <- sort.list(page.ranking.advice$vector, decreasing = TRUE)
+top3.advice <- sort.advice[1:10]
+sorted.a <- page.ranking.advice$vector[top3.advice]
+
+#pander(sorted.a,digits = 2)
+```
+
+Here is the code snippet for creativity:
+```{r Creativity}
+creat <- graduation[,c( which(colnames(graduation)=='creat_01'):which(colnames(graduation)=='creat_60'))]
+mat_creat <- data.matrix(creat, rownames.force = NA)
+
+creat.g <- graph.adjacency(mat_creat, mode = "directed", weighted = NULL, diag = TRUE, add.colnames = NULL, add.rownames = NA) 
+## Ranking advice by a page rank
+page.ranking.creat <- page.rank(creat.g, vids=V(creat.g))
+creat.ranked <- lapply(page.ranking.creat, function(x) x[which.max(x)])
+write.csv(page.ranking.creat$vector, file = "CreativityPageRank.csv")
+
+## Sorting the page rank on highest value based on id
+sort.creat <- sort.list(page.ranking.creat$vector, decreasing = TRUE)
+top3.creat <- sort.creat[1:10]
+sorted.c <- page.ranking.creat$vector[top3.creat]
+
+#pander(sorted.c,digits = 2)
+```
+
+Here is the code snippet for influence:
+```{r Influence}
+infl <- graduation[,c( which(colnames(graduation)=='infl_01'):which(colnames(graduation)=='infl_60'))]
+mat_infl <- data.matrix(infl, rownames.force = NA)
+
+infl.g <- graph.adjacency(mat_infl, mode = "directed", weighted = NULL, diag = TRUE, add.colnames = NULL, add.rownames = NA) 
+
+## Ranking infl by a page rank
+page.ranking.infl <- page.rank(infl.g, vids=V(infl.g))
+infl.ranked <- lapply(page.ranking.infl, function(x) x[which.max(x)])
+write.csv(page.ranking.infl$vector, file = "InfluencePageRank.csv")
+
+## Sorting the page rank on highest value based on id
+sort.infl <- sort.list(page.ranking.infl$vector, decreasing = TRUE)
+top3.infl <- sort.infl[1:10]
+sorted.in <- page.ranking.infl$vector[top3.infl]
+
+#pander(sorted.in,digits = 2)
+```
+
+Here is the code snippet for implementation:
+```{r Implementation}
+impl <- graduation[,c( which(colnames(graduation)=='impl_01'):which(colnames(graduation)=='impl_60'))]
+mat_impl <- data.matrix(impl, rownames.force = NA)
+
+impl.g <- graph.adjacency(mat_impl, mode = "directed", weighted = NULL, diag = TRUE, add.colnames = NULL, add.rownames = NA) 
+
+## Ranking impl by a page rank
+page.ranking.impl <- page.rank(impl.g, vids=V(impl.g))
+impl.ranked <- lapply(page.ranking.impl, function(x) x[which.max(x)])
+write.csv(page.ranking.impl$vector, file = "ImplementationPageRank.csv")
+
+## Sorting the page rank on highest value based on id
+sort.impl <- sort.list(page.ranking.impl$vector, decreasing = TRUE)
+top3.impl <- sort.impl[1:10]
+sorted.impl <- page.ranking.impl$vector[top3.impl]
+
+#pander(sorted.impl,digits = 2)
+```
+
+<br />
+<br />
+_The table below contains the 10 persons with the highest PageRank score for every task category plus friendship._
+
+```{r, echo=FALSE}
+top10_id <- c(1:10)
+allRanked <- data_frame(top10_id,top3.friendship, top3.creat, top3.infl, top3.impl) 
+allRanked %>% kable(caption = "Top Ten: Page Rank Summary", col.names = c("Ranking","Friendship", "Creativity", "Influence", "Implementation"))
+```
+
+The python code can be found [here](http://pastebin.com/TygYBfkX) and is also available in the appendix section.
+
+***
+
+#ID Rankings
+<p><i>Finally, produce three tables that rank IDs by a networkspecific constructed measure of value, which is some kind of cost-benefit ratio. Explain the logic of your measure. To get you started, recall that the “cost” of each pick is the in-degrees score in the Royal Albert Hall network, so that is your denominator.</i></p>
+
+
+__Answer:__
+
+We chose PageRank as a network measure to evaluate the ability of a person for a specific task. Hence our cost-benefit ratio is  the PageRank score for the respective category divided by the friendship in-degree of the person. Finally we created three tables with the IDs, PageRank score, friendship in-degree and our cost-benefit ratio.
+
+
+## Cost-Benefit Ratio {.tabset}
+
+### Creativity
+
+```{r, fig.align='centre', eval = T}
+creattable <- read.csv("/Users/Josef/Desktop/AinB-GroupProject/Question4/Creativity Table.csv")
+creat_table <- data.frame(creattable$id, round(creattable$Creativity.Page.Rank,6), round(creattable$Frienship.indegree,6), round(creattable$Creativity.Ratio,6))
+
+
+DT::datatable(creat_table,
+              colnames = c("ID", "Creativity Page Rank","Frienship indegree","Creativity: Cost-Benefit Ratio"),
+              caption = "Creativity: Cost-Benefit Ratio")
+```
+
+### Influence
+
+```{r, fig.align = 'centre', eval = T}
+infltable <- read.csv("/Users/Josef/Desktop/AinB-GroupProject/Question4/Influence Table.csv")
+infl_table <- data.frame(infltable$id, round(infltable$Influence.Page.Rank,6), round(infltable$Frienship.indegree,6), round(infltable$Influence.Ratio,6))
+
+
+DT::datatable(infl_table,
+              colnames = c("ID", "Influence Page Rank","Frienship indegree","Influence: Cost-Benefit Ratio"),
+              caption = "Influence: Cost-Benefit Ratio")
+```
+
+### Implementation
+```{r, fig.align = 'centre', eval = T}
+impltable <- read.csv("/Users/Josef/Desktop/AinB-GroupProject/Question4/Implementation Table.csv")
+impl_table <- data.frame(impltable$id, round(impltable$Implementation.Page.Rank,6), round(impltable$Frienship.indegree,6), round(impltable$Implementation.Ratio,6))
+
+
+DT::datatable(impl_table,
+              colnames = c("ID", "Impl Page Rank", "Frienship indegree","Impl.: Cost-Benefit Ratio"),
+              caption = "Implementation: Cost-Benefit Ratio")
+```
+
+***
+
+#Conclusion
+
+```{r  include=FALSE}
+library(igraph)
+library(sp)
+set.seed(3)
+friendship <- read.csv("/Users/Josef/Desktop/Matrices_0/friendshipmat.csv", header=TRUE)
+friendship <- subset(friendship, select = -c(X))
+rownames(friendship) <- seq(1:60)
+colnames(friendship) <- seq(1:60)
+```
+
+
+```{r, include=FALSE}
+friendship <- data.matrix(friendship)
+g <- graph.adjacency(friendship, mode=c("directed"))
+```
+
+## Group Visualisation
+After running our optimization model to yield the best groups for our chosen leaders, the results obtained should all represent reasonable, eligible group choices to undertake their respective tasks. However, in order to choose which one may prove to be more effective, we need to acknowledge and explore the social dynamics of the course, which could not be captured in our optimisation model. A helpful mechanism to achieve this is to visualize their position in the friendship network of the class. This can be particularly useful to ensure that implementation team members are relatively close to each other in the network so that they can effectively work with one another, whilst creativity and influence team members should ideally find themselves across the network, ensuring that, as much as possible, the interests of different subgroups are represented.
+
+Whilst there are many ways in which subgroups can be identified in the social network of the class, a quick and visual method is to make use of community detection algorithms to find a 'best partition' for the overall collective. Whilst the algorithm will not provide concrete information of the features or interests that bring these communities together, they can be derived simply from the class' graph structure and allow us to heuristically evaluate the diversity of our groups. 
+
+In the graph below, we find the social network of the class divided into 5 communities identified by the algorithm, which will be referenced in the appraisal of the available group choices.
+
+```{r echo=FALSE, fig.width=14, fig.height = 6, fig.align='center'}
+#Sample community graph (R)
+communities <- cluster_infomap(g)
+plot( g, layout=layout.fruchterman.reingold, vertex.size=15, vertex.color = membership(communities), vertex.label.dist=0.1, edge.arrow.size=0.3)
+```
+
+##Evaluation 
+
+###Option 1
+```{r echo=FALSE, fig.height = 5.8, fig.align='center'}
+V(g)$color <- "snow2"
+V(g)[7]$color <- "steelblue3"
+V(g)[c(24,35,49,50)]$color <- "skyblue1"
+V(g)[19]$color <- "firebrick3"
+V(g)[c(1,8,30,33)]$color <- "indianred1"
+V(g)[21]$color <- "seagreen3"
+V(g)[c(20,22,34,38)]$color <- "darkseagreen1"
+plot(g, layout=layout.lgl, vertex.size=15,
+     vertex.label.dist=0.1, edge.arrow.size=0.05)
+```
+
+###Option 2
+```{r echo=FALSE, fig.align='center', fig.height = 6}
+V(g)$color <- "snow2"
+V(g)[21]$color <- "steelblue3"
+V(g)[c(7,24,35,49)]$color <- "skyblue1"
+V(g)[33]$color <- "firebrick3"
+V(g)[c(8,1,30,22)]$color <- "indianred1"
+V(g)[19]$color <- "seagreen3"
+V(g)[c(20,52,34,38)]$color <- "darkseagreen1"
+plot(g, layout=layout.lgl, vertex.size=15,
+     vertex.label.dist=0.1, edge.arrow.size=0.05)
+```
+
+
+***
+
+#Bonus 
+
+<p><i>Revisiting question 2, cosine similarity is but one method of assessing flexibility. If you allow yourself to think beyond using that technique to compare the similarity of two vectors of picks (0s and 1s), what other more creative method might you devise? How does it compare to cosine similarity? If it is different, can you provide a qualitative description of what your measure captures that is not in cosine similarity? Is it better?</i></p>
+
+__Answer:__
+
+Before we can decide if another method would be better suited we must first explore what cosine similarity (CS) is, what it tells us, and why this is important. CS takes the angle between two vectors and returns a value between 0 and 1 depending on the angle between the two vectors. Vectors with a small angle between them will give us a value close to 1, while vectors with a large angle will give values close to 0. Someone who has low CS shows they choose different people than their friend circle, likewise, someone with a high CS made their choices like their friend circle. While most people are comfortable working within their friend group, some see the benefit of working outside their circle to get different outlooks on various situations. 
+	
+While CS is good measure of someone’s adaptability, we do not agree that it is the best in our case. After exploring other options, we think Jaccard similarity (JS) would be the appropriate method to use. JS divides the intersection of a set by the union of the same set. This method accounts for both the magnitude and angle between vectors. The values of JS are like the CS method, with values ranging between 0 (for differing vectors) and 1 (for similar vectors). 
+
+
+
+
+#Appendix:
+
+### Question 3: Leaders 
+
+```
+import numpy as np
+import pandas as pd
+import networkx as nx
+import pylab as pl
+
+
+friends = pd.read_csv("/Users/joaquincoitino/Desktop/peoplepickinganonymisedwoselfvotes.csv", header=0, index_col=0)
+
+cosine_similarity = pd.read_csv("/Users/joaquincoitino/Desktop/GroupProjectCosineSimilarityExcelTable.csv", header=0, index_col=0)
+
+       
+def mean(numbers):
+   return float(sum(numbers)) / max(len(numbers), 1)     
+
+
+### Average PageRank for Creativity:
+
+creat_pagerank = pd.read_csv("/Users/joaquincoitino/Desktop/CreativityPageRank.csv", usecols = ['x'])
+
+creat_adj_matrix = friends.loc[:,'creat_01':'creat_60'].as_matrix()
+
+creat_graph = nx.from_numpy_matrix(creat_adj_matrix, create_using = nx.DiGraph())
+
+creat_pr_successors = []
+
+for i in creat_graph.nodes_iter():
+    list_pr =[]
+
+    for j in creat_graph.successors(i):
+        list_pr.append(creat_pagerank.loc[j,'x'])
+    creat_pr_successors.append(mean(list_pr))
+    
+   
+### Average PageRank for Influence:
+    
+infl_pagerank = pd.read_csv("/Users/joaquincoitino/Desktop/InfluencePageRank.csv", usecols = ['x'])
+
+infl_adj_matrix = friends.loc[:,'infl_01':'infl_60'].as_matrix()
+
+infl_graph = nx.from_numpy_matrix(infl_adj_matrix, create_using = nx.DiGraph())
+
+infl_pr_successors = []
+
+for i in infl_graph.nodes_iter():
+    list_pr =[]
+
+    for j in infl_graph.successors(i):
+        list_pr.append(infl_pagerank.loc[j,'x'])
+    infl_pr_successors.append(mean(list_pr))
+
+
+### Average PageRank for Implementation:
+    
+impl_pagerank = pd.read_csv("/Users/joaquincoitino/Desktop/ImplementationPageRank.csv", usecols = ['x'])
+
+impl_adj_matrix = friends.loc[:,'impl_01':'impl_60'].as_matrix()
+
+impl_graph = nx.from_numpy_matrix(impl_adj_matrix, create_using = nx.DiGraph())
+
+impl_pr_successors = []
+
+for i in impl_graph.nodes_iter():
+    list_pr =[]
+
+    for j in impl_graph.successors(i):
+        list_pr.append(impl_pagerank.loc[j,'x'])
+    impl_pr_successors.append(mean(list_pr)) 
+
+    
+### Average pagerank for all categories
+
+avg_pagerank_succe = [(x+y+z)/3 for x,y,z in zip(creat_pr_successors, infl_pr_successors, impl_pr_successors)]
+    
+### Frienship indegree
+
+friend_adj_matrix = friends.loc[:,'friend_01':'friend_60'].as_matrix()
+
+friend_graph = nx.from_numpy_matrix(friend_adj_matrix, create_using = nx.DiGraph())
+
+friend_indegree = friend_graph.in_degree()
+
+list_f_indegree = []
+
+for i in friend_indegree:
+    list_f_indegree.append(friend_indegree[i])
+
+## pagerank/degree ratio
+
+ratio_pr_findegree_creat = [x/y for x, y in zip(creat_pagerank.loc[:,'x'], list_f_indegree)]
+ratio_pr_findegree_infl = [x/y for x, y in zip(infl_pagerank.loc[:,'x'], list_f_indegree)]
+ratio_pr_findegree_impl = [x/y for x, y in zip(impl_pagerank.loc[:,'x'], list_f_indegree)]
+                           
+cosine = cosine_similarity.loc[:,'Score'].tolist()
+
+pr_creat = creat_pagerank.loc[:,'x'].tolist()
+pr_infl = infl_pagerank.loc[:,'x'].tolist()
+pr_impl = impl_pagerank.loc[:,'x'].tolist()
+                           
+creat_dataframe = pd.DataFrame.from_items([('id', list(range(1,61))), ('Creativity Page Rank', pr_creat), ('Cosine similarity', cosine), ('Overall Average Page Rank of Successors', avg_pagerank_succe), ('Average Creativity Page Rank Successors', creat_pr_successors), ('Frienship indegree', list_f_indegree), ('Creativity Ratio', ratio_pr_findegree_creat)])
+creat_dataframe.to_csv('Creativity Table.csv', index = False)
+
+infl_dataframe = pd.DataFrame.from_items([('id', list(range(1,61))), ('Influence Page Rank', pr_infl), ('Cosine similarity', cosine), ('Overall Average Page Rank of Successors', avg_pagerank_succe), ('Average Influence Page Rank Successors', infl_pr_successors), ('Frienship indegree', list_f_indegree), ('Influence Ratio', ratio_pr_findegree_infl)])
+infl_dataframe.to_csv('Influence Table.csv', index = False)
+
+impl_dataframe = pd.DataFrame.from_items([('id', list(range(1,61))), ('Implementation Page Rank', pr_impl), ('Cosine similarity', cosine), ('Overall Average Page Rank of Successors', avg_pagerank_succe), ('Average Implementation Page Rank Successors', impl_pr_successors), ('Frienship indegree', list_f_indegree), ('Implementation Ratio', ratio_pr_findegree_impl)])
+impl_dataframe.to_csv('Implementation Table.csv', index = False)
+```
