@@ -2,7 +2,7 @@
 title: 'AinB Assignment: Group 10'
 author: Joaquin Coitino, Wing Yung Ho, Andrea Iglesias Villegas, Jason Kuilan, Lukas
   Wolff, Dian Yue Josef Zhu
-date: "12/4/2016"
+date: "12/14/2016"
 output:
   html_document:
     code_folding: hide
@@ -19,7 +19,7 @@ header-includes: \usepackage{float}
 
 <br>
 <br>
-<p style="border:1.5px; border-style:solid; border-color:#000000; padding: 1em;">This report contains interactive elements and has the best user experience if a web browser is used. Printing is possible. However, will not result in an optimal reading experience. The `R` code used to perform these analyses has been provided as supplementary files, and can be viewed in this report using the _Code_ buttons to toggle code viewing. All files are available on online on Github [here](https://github.com/Josef123456/Analytics_for_Business_Group10.git).</p>
+<p style="border:1.5px; border-style:solid; border-color:#000000; padding: 1em;">This report contains interactive elements and has the best user experience if a web browser is used. Printing is possible. However, will not result in an optimal reading experience. The `R` code used to perform these analyses has been provided as supplementary files, and can be viewed in this report using the _Code_ buttons to toggle code viewing. All files are available online on Github [here](https://github.com/Josef123456/Analytics_for_Business_Group10.git).</p>
 
 ```{r, echo=FALSE, message=FALSE}
 library(AER)
@@ -35,7 +35,7 @@ library(broom)
 
 #Introduction
 
-Before beginning to work in the project, the data was cleaned since some students were voting themselves.
+Before Group 10 began working on the project, the data was cleaned since some students were voting themselves.
 
 ```{r, include=FALSE}
 setwd("/Users/Josef/Desktop/Analytics_for_Business_Group10/")
@@ -650,7 +650,7 @@ subject to inf_leader: x[21,2] = 1;
 subject to imp_leader: x[19,3] = 1;
 ```
 
-__maxpagerank_withcomm.mod__ (With community)
+__maxpagerank_withcomm.mod__ (With community):
 ```
 set id ordered ;
 param create_pr {id};
