@@ -19,7 +19,7 @@ header-includes: \usepackage{float}
 
 <br>
 <br>
-<p style="border:1.5px; border-style:solid; border-color:#000000; padding: 1em;">This report contains interactive elements and has the best user experience if a web browser is used. Printing is possible. However, will not result in an optimal reading experience. The `R` code used to perform these analyses has been provided as supplementary files, and can be viewed in this report using the _Code_ buttons to toggle code viewing. All files are available on online on Github [here]().</p>
+<p style="border:1.5px; border-style:solid; border-color:#000000; padding: 1em;">This report contains interactive elements and has the best user experience if a web browser is used. Printing is possible. However, will not result in an optimal reading experience. The `R` code used to perform these analyses has been provided as supplementary files, and can be viewed in this report using the _Code_ buttons to toggle code viewing. All files are available on online on Github [here](https://github.com/Josef123456/Analytics_for_Business_Group10.git).</p>
 
 ```{r, echo=FALSE, message=FALSE}
 library(AER)
@@ -38,12 +38,13 @@ library(broom)
 Before beginning to work in the project, the data was cleaned since some students were voting themselves.
 
 ```{r, include=FALSE}
+setwd("/Users/Josef/Desktop/Analytics_for_Business_Group10/")
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
 
 ```{r echo=FALSE}
-people <- read.csv("/Users/Josef/Desktop/peoplepickinganonymised.csv", header=TRUE)
+people <- read.csv("../Analytics_for_Business_Group10/Question1/peoplepickinganonymised.csv", header=TRUE)
 friendship <- subset(people, select = -c(1:3,64:length(people)))
 advice <- subset(people, select = -c(1:63, 124:length(people)))
 creat <- subset(people, select = -c(1:123, 184:length(people)))
@@ -58,21 +59,19 @@ colnames(implem) <- seq(1,60,by=1)
 colnames(infl) <- seq(1,60,by=1)
 ```
 
-```{r echo=FALSE}
+```{r echo=FALSE, message=FALSE, include=FALSE}
 friendship[row(friendship) == col(friendship)] <- 0
 creat[row(creat) == col(creat)] <- 0
 implem[row(implem) == col(implem)] <- 0
 infl[row(infl) == col(infl)] <- 0
 ```
 
-<br />
-Using the 4 CSV, the final peoplepickinganonymisedwoselfvotes.csv was created.
 
 ```{r}
-write.csv(friendship, "friendshipmat.csv")
-write.csv(creat, "creatmat.csv")
-write.csv(implem, "implemmat.csv")
-write.csv(infl, "inflmat.csv")
+#write.csv(friendship, "friendshipmat.csv")
+#write.csv(creat, "creatmat.csv")
+#write.csv(implem, "implemmat.csv")
+#write.csv(infl, "inflmat.csv")
 ```
 
 #Regressions
@@ -84,7 +83,7 @@ __Answer:__
 To regress the influence of friendship over individuals’ choices, we must decide between running negative binomial and Poisson models, which are both applicable to count data but the former is not affected by overdispersion.
 
 ```{r}
-graduation <- read.csv('/Users/Josef/Desktop/AinB-GroupProject/Question1/peoplepickinganonymisedwoselfvotes.csv', header = TRUE)
+graduation <- read.csv('../Analytics_for_Business_Group10/Question1/peoplepickinganonymisedwoselfvotes.csv', header = TRUE)
 centrality <- data.frame(id = graduation$id, friendcent = NA)
 friendcols <- c( which(colnames(graduation)=='friend_01'):which(colnames(graduation)=='friend_60'))
 advicecols <- c( which(colnames(graduation)=='advice_01'):which(colnames(graduation)=='advice_60'))
@@ -108,6 +107,11 @@ creat.model <- glm.nb(creativity ~ friendship, data = centrality)
 infl.model <- glm.nb(influence ~ friendship, data = centrality)
 impl.model <- glm.nb(implementation ~ friendship, data = centrality)
 
+#odTest_creat <- odTest(creat.model)
+#odTest_infl <- odTest(infl.model)
+#odTest_impl <- odTest(impl.model)
+```
+```{r, include=FALSE}
 odTest_creat <- odTest(creat.model)
 odTest_infl <- odTest(infl.model)
 odTest_impl <- odTest(impl.model)
@@ -144,7 +148,7 @@ The cosine similarity was calculated to evaluate the flexibility of potential le
 <br />
 
 ```{r}
-cosine <- read.csv('/Users/Josef/Desktop/AinB-GroupProject/Question2/GroupProjectCosineSimilarityExcelTable.csv', header = TRUE)
+cosine <- read.csv('../Analytics_for_Business_Group10/Question2/GroupProjectCosineSimilarityExcelTable.csv', header = TRUE)
 
 cosine_Table<- data.frame(cosine$id, round(cosine$Score,6), cosine$Z_score)
 
@@ -165,19 +169,19 @@ __Page Rank__:
 
 After evaluating the pagerank for creativity, influence, and implementation and writing them out as Spreadsheets, we used these to facilitate three Spreadsheets containing:
 
-  + average cosine
+  + average cosine similarity
   
-  + average pagerank for each category
+  + pagerank for respective category
   
   + average pagerank for the successors
   
   + friendship indegree
-  
-  + the cost-benefit ratio.
 
 __Outcome:__
 
-To pick our leaders we decided to use PageRank to evaluate the task specific ability of a person supported by our flexibility score from task 2 to indicate leadership potential. Additionally we considered the friendship in degree if it was extremely high, as it might constrain the decisions for the group members, although we put the focus on the PageRank score. Our final picks for the leaders are:
+To pick our leaders we decided to use PageRank to evaluate the task specific ability of a person supported by our flexibility score from task 2 to indicate leadership potential. Additionally we considered the friendship in degree if it was extremely high, as it might constrain the decisions for the group members, although we put the focus on the PageRank score. Moreover, the creativity leader selected was required to have chosen a big party in the survey.
+
+Our final picks for the leaders are:
 
   + Creativity: 7
   + Influence: 21
@@ -189,7 +193,7 @@ To pick our leaders we decided to use PageRank to evaluate the task specific abi
 ### Creativity Table
 
 ```{r, fig.align='centre', eval = T}
-creattable <- read.csv("/Users/Josef/Desktop/AinB-GroupProject/Question3/Creativity Table.csv")
+creattable <- read.csv("../Analytics_for_Business_Group10/Question3/Creativity Table.csv")
 creat_table <- data.frame(creattable$id, round(creattable$Creativity.Page.Rank,6), round(creattable$Cosine.similarity,6), round(creattable$Overall.Average.Page.Rank.of.Successors,6), round(creattable$Average.Creativity.Page.Rank.Successors,6), round(creattable$Frienship.indegree,6))
 
 
@@ -202,7 +206,7 @@ DT::datatable(creat_table,
 
 ### Influence table
 ```{r , fig.align = 'centre', eval = T}
-infltable <- read.csv("/Users/Josef/Desktop/AinB-GroupProject/Question3/Influence Table.csv")
+infltable <- read.csv("../Analytics_for_Business_Group10/Question3/Influence Table.csv")
 infl_table <- data.frame(infltable$id, round(infltable$Influence.Page.Rank,6), round(infltable$Cosine.similarity,6), round(infltable$Overall.Average.Page.Rank.of.Successors,6), round(infltable$Average.Influence.Page.Rank.Successors,6), round(infltable$Frienship.indegree,6))
 
 
@@ -215,7 +219,7 @@ DT::datatable(infl_table,
 
 ### Implementation table
 ```{r network_bet, fig.align = 'centre', eval = T}
-impltable <- read.csv("/Users/Josef/Desktop/AinB-GroupProject/Question3/Implementation Table.csv")
+impltable <- read.csv("../Analytics_for_Business_Group10/Question3/Implementation Table.csv")
 impl_table <- data.frame(impltable$id, round(impltable$Implementation.Page.Rank,6), round(impltable$Cosine.similarity,6), round(impltable$Overall.Average.Page.Rank.of.Successors,6), round(impltable$Average.Implementation.Page.Rank.Successors,6), round(impltable$Frienship.indegree,6))
 
 
@@ -276,7 +280,8 @@ creat.g <- graph.adjacency(mat_creat, mode = "directed", weighted = NULL, diag =
 ## Ranking advice by a page rank
 page.ranking.creat <- page.rank(creat.g, vids=V(creat.g))
 creat.ranked <- lapply(page.ranking.creat, function(x) x[which.max(x)])
-write.csv(page.ranking.creat$vector, file = "CreativityPageRank.csv")
+
+#write.csv(page.ranking.creat$vector, file = "CreativityPageRank.csv")
 
 ## Sorting the page rank on highest value based on id
 sort.creat <- sort.list(page.ranking.creat$vector, decreasing = TRUE)
@@ -296,7 +301,8 @@ infl.g <- graph.adjacency(mat_infl, mode = "directed", weighted = NULL, diag = T
 ## Ranking infl by a page rank
 page.ranking.infl <- page.rank(infl.g, vids=V(infl.g))
 infl.ranked <- lapply(page.ranking.infl, function(x) x[which.max(x)])
-write.csv(page.ranking.infl$vector, file = "InfluencePageRank.csv")
+
+#write.csv(page.ranking.infl$vector, file = "InfluencePageRank.csv")
 
 ## Sorting the page rank on highest value based on id
 sort.infl <- sort.list(page.ranking.infl$vector, decreasing = TRUE)
@@ -316,7 +322,8 @@ impl.g <- graph.adjacency(mat_impl, mode = "directed", weighted = NULL, diag = T
 ## Ranking impl by a page rank
 page.ranking.impl <- page.rank(impl.g, vids=V(impl.g))
 impl.ranked <- lapply(page.ranking.impl, function(x) x[which.max(x)])
-write.csv(page.ranking.impl$vector, file = "ImplementationPageRank.csv")
+
+#write.csv(page.ranking.impl$vector, file = "ImplementationPageRank.csv")
 
 ## Sorting the page rank on highest value based on id
 sort.impl <- sort.list(page.ranking.impl$vector, decreasing = TRUE)
@@ -354,7 +361,7 @@ We chose PageRank as a network measure to evaluate the ability of a person for a
 ### Creativity
 
 ```{r, fig.align='centre', eval = T}
-creattable <- read.csv("/Users/Josef/Desktop/AinB-GroupProject/Question4/Creativity Table.csv")
+creattable <- read.csv("../Analytics_for_Business_Group10/Question4/Creativity Table.csv")
 creat_table <- data.frame(creattable$id, round(creattable$Creativity.Page.Rank,6), round(creattable$Frienship.indegree,6), round(creattable$Creativity.Ratio,6))
 
 
@@ -366,7 +373,7 @@ DT::datatable(creat_table,
 ### Influence
 
 ```{r, fig.align = 'centre', eval = T}
-infltable <- read.csv("/Users/Josef/Desktop/AinB-GroupProject/Question4/Influence Table.csv")
+infltable <- read.csv("../Analytics_for_Business_Group10/Question4/Influence Table.csv")
 infl_table <- data.frame(infltable$id, round(infltable$Influence.Page.Rank,6), round(infltable$Frienship.indegree,6), round(infltable$Influence.Ratio,6))
 
 
@@ -377,7 +384,7 @@ DT::datatable(infl_table,
 
 ### Implementation
 ```{r, fig.align = 'centre', eval = T}
-impltable <- read.csv("/Users/Josef/Desktop/AinB-GroupProject/Question4/Implementation Table.csv")
+impltable <- read.csv("../Analytics_for_Business_Group10/Question4/Implementation Table.csv")
 impl_table <- data.frame(impltable$id, round(impltable$Implementation.Page.Rank,6), round(impltable$Frienship.indegree,6), round(impltable$Implementation.Ratio,6))
 
 
@@ -394,7 +401,7 @@ DT::datatable(impl_table,
 library(igraph)
 library(sp)
 set.seed(3)
-friendship <- read.csv("/Users/Josef/Desktop/Matrices_0/friendshipmat.csv", header=TRUE)
+friendship <- read.csv("../Analytics_for_Business_Group10/Question1/Cleaned Spreadsheet/friendshipmat.csv", header=TRUE)
 friendship <- subset(friendship, select = -c(X))
 rownames(friendship) <- seq(1:60)
 colnames(friendship) <- seq(1:60)
@@ -406,12 +413,7 @@ friendship <- data.matrix(friendship)
 g <- graph.adjacency(friendship, mode=c("directed"))
 ```
 
-## Group Visualisation
-After running our optimization model to yield the best groups for our chosen leaders, the results obtained should all represent reasonable, eligible group choices to undertake their respective tasks. However, in order to choose which one may prove to be more effective, we need to acknowledge and explore the social dynamics of the course, which could not be captured in our optimisation model. A helpful mechanism to achieve this is to visualize their position in the friendship network of the class. This can be particularly useful to ensure that implementation team members are relatively close to each other in the network so that they can effectively work with one another, whilst creativity and influence team members should ideally find themselves across the network, ensuring that, as much as possible, the interests of different subgroups are represented.
-
-Whilst there are many ways in which subgroups can be identified in the social network of the class, a quick and visual method is to make use of community detection algorithms to find a 'best partition' for the overall collective. Whilst the algorithm will not provide concrete information of the features or interests that bring these communities together, they can be derived simply from the class' graph structure and allow us to heuristically evaluate the diversity of our groups. 
-
-In the graph below, we find the social network of the class divided into 5 communities identified by the algorithm, which will be referenced in the appraisal of the available group choices.
+After running the optimization model in __Ampl__ to yield the best groups for our chosen leaders, the social dynamics of the cohort, which cannot be captured in the model, are explored. Therefore, a community detection algorithms was used to find a ‘best partition’ for the overall collective in order to visualize the leaders’ position in the friendship network of the class. In the graph below, the class is divided into 4 communities (The Ampl code can be found on [Github](https://github.com/Josef123456/Analytics_for_Business_Group10.git) and in the appendix section):
 
 ```{r echo=FALSE, fig.width=14, fig.height = 6, fig.align='center'}
 #Sample community graph (R)
@@ -432,6 +434,15 @@ V(g)[21]$color <- "seagreen3"
 V(g)[c(20,22,34,38)]$color <- "darkseagreen1"
 plot(g, layout=layout.lgl, vertex.size=15,
      vertex.label.dist=0.1, edge.arrow.size=0.05)
+legend("topleft", inset = 0, 
+        cex = 0.8, 
+        legend = c("Implementation", "Influence", "Creativity"), 
+        text.col = c("red", "lightgreen","lightblue"),
+        col = c("red", "green","blue"), 
+        title = "Categories", 
+        horiz=FALSE,
+        text.font=3, 
+        pch = c(16,16))
 ```
 
 ###Option 2
@@ -445,8 +456,43 @@ V(g)[19]$color <- "seagreen3"
 V(g)[c(20,52,34,38)]$color <- "darkseagreen1"
 plot(g, layout=layout.lgl, vertex.size=15,
      vertex.label.dist=0.1, edge.arrow.size=0.05)
+legend("topleft", inset = 0, 
+        cex = 0.8, 
+        legend = c("Implementation", "Influence", "Creativity"), 
+        text.col = c("red", "lightgreen","lightblue"),
+        col = c("red", "green","blue"), 
+        title = "Categories", 
+        horiz=FALSE,
+        text.font=3, 
+        pch = c(16,16))
 ```
 
+
+According to the graphs, only one of the team members for all categories comes from a different community than the rest. In the case of the implementation team, this ensures the members have a close enough relationship to effectively work together. However, for the creativity and influence teams, members should preferably be distributed across the network to better represent everyone’s interests. Consequently, a constraint is added to the model which allows no more than two members of the team for influence and creativity to belong to the same community. The new model that results for the creativity team has an overall pagerank significantly lower. However, the difference for the influence one is not considerably large. Therefore, for the former team the previous option is chosen but for the latter team the new one is preferred.
+
+###Final Option
+And below, the plot depicts the result of our final decision for the groups:
+
+```{r echo=FALSE, fig.height = 5.8, fig.align='center'}
+V(g)$color <- "snow2"
+V(g)[7]$color <- "dodgerblue3"
+V(g)[c(24,35,49,50)]$color <- "skyblue1"
+V(g)[19]$color <- "brown2"
+V(g)[c(1,8,30,33)]$color <- "salmon"
+V(g)[21]$color <- "seagreen3"
+V(g)[c(25,34,56,23)]$color <- "darkseagreen1"
+plot(g, layout=layout.fruchterman.reingold, vertex.size=15, vertex.color=V(g)$color,
+     vertex.label.dist=0.1, edge.arrow.size=0.05, vertex.label.color = "grey26")
+legend("topleft", inset = 0, 
+        cex = 0.8, 
+        legend = c("Implementation", "Influence", "Creativity"), 
+        text.col = c("red", "lightgreen","lightblue"),
+        col = c("red", "green","blue"), 
+        title = "Categories", 
+        horiz=FALSE,
+        text.font=3, 
+        pch = c(16,16))
+``` 
 
 ***
 
@@ -460,8 +506,7 @@ Before we can decide if another method would be better suited we must first expl
 	
 While CS is good measure of someone’s adaptability, we do not agree that it is the best in our case. After exploring other options, we think Jaccard similarity (JS) would be the appropriate method to use. JS divides the intersection of a set by the union of the same set. This method accounts for both the magnitude and angle between vectors. The values of JS are like the CS method, with values ranging between 0 (for differing vectors) and 1 (for similar vectors). 
 
-
-
+As in our case not all people have the same number of choices, we think the magnitude of the vector should be integrated as well into our calculations.
 
 #Appendix:
 
@@ -574,4 +619,68 @@ infl_dataframe.to_csv('Influence Table.csv', index = False)
 
 impl_dataframe = pd.DataFrame.from_items([('id', list(range(1,61))), ('Implementation Page Rank', pr_impl), ('Cosine similarity', cosine), ('Overall Average Page Rank of Successors', avg_pagerank_succe), ('Average Implementation Page Rank Successors', impl_pr_successors), ('Frienship indegree', list_f_indegree), ('Implementation Ratio', ratio_pr_findegree_impl)])
 impl_dataframe.to_csv('Implementation Table.csv', index = False)
+```
+
+### Optimization Model AMPL
+
+__maxpagerank.mod:__
+```
+set id ordered ;
+param create_pr {id};
+param imp_pr {id};
+param inf_pr {id};
+param friendship_indegree {id};
+
+data allpagerank.dat;
+param N := 3;
+
+var x {i in id , 1.. N} binary;
+
+maximize pr: sum {i in id} (x[i,1]*create_pr[i]+ x[i,2]*inf_pr[i] +x[i,3]*imp_pr[i]);
+
+subject to create_friendship: sum {i in id}  (x[i,1]*friendship_indegree[i]) <= 30;
+subject to inf_friendship: sum {i in id}  (x[i,2]*friendship_indegree[i]) <= 30;
+subject to imp_friendship: sum {i in id}  (x[i,3]*friendship_indegree[i]) <= 30;
+subject to create_4members:  sum {i in id} (x[i,1]) = 5;
+subject to inf_4members:  sum {i in id} (x[i,2]) = 5;
+subject to imp_4members:  sum {i in id} (x[i,3]) = 5;
+subject to picked_once {i in id}: x[i,1] + x[i,2] + x[i,3] <= 1;
+subject to create_leader: x[7,1] = 1;
+subject to inf_leader: x[21,2] = 1;
+subject to imp_leader: x[19,3] = 1;
+```
+
+__maxpagerank_withcomm.mod__ (With community)
+```
+set id ordered ;
+param create_pr {id};
+param imp_pr {id};
+param inf_pr {id};
+param friendship_indegree {id};
+
+data allpagerank.dat;
+param N := 3;
+
+var x {i in id , 1.. N} binary;
+
+maximize pr: sum {i in id} (x[i,1]*create_pr[i]+ x[i,2]*inf_pr[i] +x[i,3]*imp_pr[i]);
+
+subject to create_friendship: sum {i in id}  (x[i,1]*friendship_indegree[i]) <= 30;
+subject to inf_friendship: sum {i in id}  (x[i,2]*friendship_indegree[i]) <= 30;
+subject to imp_friendship: sum {i in id}  (x[i,3]*friendship_indegree[i]) <= 30;
+subject to create_4members:  sum {i in id} (x[i,1]) = 5;
+subject to inf_4members:  sum {i in id} (x[i,2]) = 5;
+subject to imp_4members:  sum {i in id} (x[i,3]) = 5;
+subject to picked_once {i in id}: x[i,1] + x[i,2] + x[i,3] <= 1;
+subject to create_leader: x[7,1] = 1;
+subject to inf_leader: x[21,2] = 1;
+subject to imp_leader: x[19,3] = 1;
+subject to creat_community1: x[51,1]+ x[56,1]+x[28,1]+x[14,1]+ x[12,1] <=2;
+subject to creat_community2: x[32,1]+ x[54,1]+x[43,1]+x[41,1]+ x[42,1]+x[55,1]+x[16,1]+x[18,1]+x[13,1] <=2;
+subject to creat_community3: x[49,1]+ x[27,1]+x[23,1]+x[57,1]+ x[4,1]+x[5,1]+x[11,1]+x[2,1]+x[44,1]+x[26,1]+x[36,1]+x[9,1]+x[40,1]+x[53,1]<=2;
+subject to creat_community4: x[15,1]+ x[1,1]+x[29,1]+x[3,1]+ x[37,1]+x[21,1]+x[20,1]+x[60,1]+x[47,1]+x[38,1]+x[52,1]+x[33,1]+x[46,1]+x[59,1] +x[24,1]+x[19,1]+x[17,1]+x[34,1]+x[22,1] +x[7,1]+x[50,1]+x[6,1]+x[45,1]+x[35,1] +x[10,1]+x[30,1]+x[8,1]+x[31,1]+x[58,1] + x[48,1] + x[39,1]<=2;
+subject to inf_community1: x[51,2]+ x[56,2]+x[28,2]+x[14,2]+ x[12,2] <=2;
+subject to inf_community2: x[32,2]+ x[54,2]+x[43,2]+x[41,2]+ x[42,2]+x[55,2]+x[16,2]+x[18,2]+x[13,2] <=2;
+subject to inf_community3: x[49,2]+ x[27,2]+x[23,2]+x[57,2]+ x[4,2]+x[5,2]+x[11,2]+x[2,2]+x[44,2]+x[26,2]+x[36,2]+x[9,2]+x[40,2]+x[53,2]<=2;
+subject to inf_community4: x[15,2]+ x[1,2]+x[29,2]+x[3,2]+ x[37,2]+x[21,2]+x[20,2]+x[60,2]+x[47,2]+x[38,2]+x[52,2]+x[33,2]+x[46,2]+x[59,2] +x[24,2]+x[19,2]+x[17,2]+x[34,2]+x[22,2] +x[7,2]+x[50,2]+x[6,2]+x[45,2]+x[35,2] +x[10,2]+x[30,2]+x[8,2]+x[31,2]+x[58,2] + x[48,2] + x[39,2]<=2;
 ```
