@@ -34,8 +34,7 @@ library(broom)
 ```
 
 #Introduction
-
-Before Group 10 began working on the project, the data was cleaned since some students were voting themselves.
+Prior to the start of this analysis, the data provided was cleansed to remove self-moves and separate the matrices provided. These separate datasets were then used for the following sections.
 
 ```{r, include=FALSE}
 setwd("/Users/Josef/Desktop/Analytics_for_Business_Group10/")
@@ -80,7 +79,7 @@ As a starting point, you might like to know how popularity is related to being p
 
 __Answer:__
 
-To regress the influence of friendship over individuals’ choices, we must decide between running negative binomial and Poisson models, which are both applicable to count data but the former is not affected by overdispersion.
+To regress the influence of friendship over individuals’ task-oriented choices, we should apply a negative binomial or Poisson model, as both are applicable to count data, although the former is not affected by overdispersion.
 
 ```{r}
 graduation <- read.csv('../Analytics_for_Business_Group10/Question1/peoplepickinganonymisedwoselfvotes.csv', header = TRUE)
@@ -100,7 +99,7 @@ centrality$implementation <- colSums(graduation[implcols])
 ```
 
 <br />
-In order to make this decision, we test for overdispersion (odTest):
+In order to make this decision, we tested for overdispersion using odTest:
 
 ```{r}
 creat.model <- glm.nb(creativity ~ friendship, data = centrality)
@@ -123,7 +122,7 @@ odTest_impl <- odTest(impl.model)
 |:------:|:------:|:------:|:------:|
 |P-value|0.004049|2.948 x 10^14|0.0006068|
 
-In all the cases, the test provides evidence of the presence of overdispersion at a 95% significance level, which allows us to prefer the negative binomial models:
+In all the cases, the test provided evidence of the presence of overdispersion at a 95% significance level, allowing us to favour negative binomial models:
 <br />
 <br />
 
@@ -133,7 +132,7 @@ stargazer(creat.model, infl.model, impl.model, header = FALSE, table.placement =
 
 <br />
 <br />
-All in all, the relationship between the friendship factor and the indegree counts is both positive and statistically significant for all three categories.
+As expected and shown above, the relationship between the friendship factor and the indegree counts seems to be positive and statistically significant across all categories.
 
 
 ***
@@ -143,7 +142,7 @@ Your leaders should show smart flexibility in picking different people for diffe
 
 __Answer:__
 
-The cosine similarity was calculated to evaluate the flexibility of potential leaders. The method compares the vector of the friendship choices with the vectors for creativity, influence and implementation. This represents whether someone only picked his friends in all categories or adjusted regarding the task. A high score indicates low flexibility and might be an indicator for missing leadership skills.
+The cosine similarity measure was computed to evaluate the flexibility of potential leaders. This method compares the vector of the friendship choices with the vectors for creativity, influence and implementation respectively. From its results, we can derive whether someone was incluned to pick friends in all categories or adjusted their choices by task. High scores might suggest low flexibility and unsuitability for a leadership position.
 
 <br />
 
@@ -167,7 +166,7 @@ __Answer:__
 
 __Page Rank__:
 
-After evaluating the pagerank for creativity, influence, and implementation and writing them out as Spreadsheets, we used these to facilitate three Spreadsheets containing:
+After applying an eigenvector centrality measure resembling a PageRank algorithm for creativity, influence, and implementation, results were included in a Spreadsheet of the followig structure:
 
   + average cosine similarity
   
@@ -179,7 +178,7 @@ After evaluating the pagerank for creativity, influence, and implementation and 
 
 __Outcome:__
 
-To pick our leaders we decided to use PageRank to evaluate the task specific ability of a person supported by our flexibility score from task 2 to indicate leadership potential. Additionally we considered the friendship in degree if it was extremely high, as it might constrain the decisions for the group members, although we put the focus on the PageRank score. Moreover, the creativity leader selected was required to have chosen a big party in the survey.
+Our choice of leaders was mostly informed by the PageRank measure, indicating the perceived task-specific ability of a person, supported by the previous flexibility score to indicate leadership potential. Additionally, high friendship in-degrees were avoided, as they might constrain the optimality of group member choices. Moreover, the choice to favour large parties informed our choice for the creativity leader. 
 
 Our final picks for the leaders are:
 
@@ -187,6 +186,7 @@ Our final picks for the leaders are:
   + Influence: 21
   + Implementation: 19
 
+An alternative combination with the second best leader choices for each task was also examined. 
 
 ## Creativity, Influence, Implementation Table {.tabset}
 
@@ -235,7 +235,7 @@ DT::datatable(impl_table,
 
 _Below we provided our code to justify our PageRank calulations:_
 
-Here is the code snippet for friendship:
+Code snippet for friendship:
 ```{r friendship}
 friendship <- graduation[,c( which(colnames(graduation)=='friend_01'):which(colnames(graduation)=='friend_60'))]
 mat_friendship <- data.matrix(friendship, rownames.force = NA)
@@ -253,7 +253,7 @@ sorted.f <- page.ranking.friendship$vector[top3.friendship]
 #pander(sorted.f,digits = 2)
 ```
 
-Here is the code snippet for advice:
+Code snippet for advice:
 ```{r advice}
 advice <- graduation[,c( which(colnames(graduation)=='advice_01'):which(colnames(graduation)=='advice_60'))]
 mat_advice <- data.matrix(advice, rownames.force = NA)
@@ -271,7 +271,7 @@ sorted.a <- page.ranking.advice$vector[top3.advice]
 #pander(sorted.a,digits = 2)
 ```
 
-Here is the code snippet for creativity:
+Code snippet for creativity:
 ```{r Creativity}
 creat <- graduation[,c( which(colnames(graduation)=='creat_01'):which(colnames(graduation)=='creat_60'))]
 mat_creat <- data.matrix(creat, rownames.force = NA)
@@ -291,7 +291,7 @@ sorted.c <- page.ranking.creat$vector[top3.creat]
 #pander(sorted.c,digits = 2)
 ```
 
-Here is the code snippet for influence:
+Code snippet for influence:
 ```{r Influence}
 infl <- graduation[,c( which(colnames(graduation)=='infl_01'):which(colnames(graduation)=='infl_60'))]
 mat_infl <- data.matrix(infl, rownames.force = NA)
@@ -312,7 +312,7 @@ sorted.in <- page.ranking.infl$vector[top3.infl]
 #pander(sorted.in,digits = 2)
 ```
 
-Here is the code snippet for implementation:
+Code snippet for implementation:
 ```{r Implementation}
 impl <- graduation[,c( which(colnames(graduation)=='impl_01'):which(colnames(graduation)=='impl_60'))]
 mat_impl <- data.matrix(impl, rownames.force = NA)
@@ -335,7 +335,7 @@ sorted.impl <- page.ranking.impl$vector[top3.impl]
 
 <br />
 <br />
-_The table below contains the 10 persons with the highest PageRank score for every task category plus friendship._
+_The table below contains the 10 people with the highest PageRank score for every task category, and friendship._
 
 ```{r, echo=FALSE}
 top10_id <- c(1:10)
@@ -353,8 +353,7 @@ The python code can be found [here](http://pastebin.com/TygYBfkX) and is also av
 
 __Answer:__
 
-We chose PageRank as a network measure to evaluate the ability of a person for a specific task. Hence our cost-benefit ratio is  the PageRank score for the respective category divided by the friendship in-degree of the person. Finally we created three tables with the IDs, PageRank score, friendship in-degree and our cost-benefit ratio.
-
+Having chosen the PageRank measure to evaluate each individual's perceived suitability to a specific task, our calculated cost-benefit ratio is this PageRank score (for each category) divided by their friendship in-degree. Three tables were then created containing the IDs, PageRank scores, friendship in-degrees and our cost-benefit ratio results.
 
 ## Cost-Benefit Ratio {.tabset}
 
@@ -413,7 +412,7 @@ friendship <- data.matrix(friendship)
 g <- graph.adjacency(friendship, mode=c("directed"))
 ```
 
-After running the optimization model in __Ampl__ to yield the best groups for our chosen leaders, the social dynamics of the cohort, which cannot be captured in the model, are explored. Therefore, a community detection algorithms was used to find a ‘best partition’ for the overall collective in order to visualize the leaders’ position in the friendship network of the class. In the graph below, the class is divided into 4 communities (The Ampl code can be found on [Github](https://github.com/Josef123456/Analytics_for_Business_Group10.git) and in the appendix section):
+After running the optimization model in __Ampl__ to yield the best groups for our chosen leaders, the social dynamics of the cohort, which cannot be captured in the model, were explored. A community detection algorithm, Infomap, found a realistic ‘best partition’ for the class friendship network, which allowed to visualise group members' distribution across it. In the graph below, the class is divided into 4 communities (The Ampl code can be found on [Github](https://github.com/Josef123456/Analytics_for_Business_Group10.git) and in the appendix section):
 
 ```{r echo=FALSE, fig.width=14, fig.height = 6, fig.align='center'}
 #Sample community graph (R)
@@ -422,6 +421,8 @@ plot( g, layout=layout.fruchterman.reingold, vertex.size=15, vertex.color = memb
 ```
 
 ##Evaluation 
+
+###Original Optimisation Model 
 
 ###Option 1
 ```{r echo=FALSE, fig.height = 5.8, fig.align='center'}
@@ -467,11 +468,12 @@ legend("topleft", inset = 0,
         pch = c(16,16))
 ```
 
+According to this partition, only one of the team members for all categories comes from a different community than the rest. In the case of the implementation team, this might suggest that team members are close enough to work together effectively and cohesively. However, for the creativity and influence teams, members should preferably be distributed across the network to better represent everyone’s interests. 
 
-According to the graphs, only one of the team members for all categories comes from a different community than the rest. In the case of the implementation team, this ensures the members have a close enough relationship to effectively work together. However, for the creativity and influence teams, members should preferably be distributed across the network to better represent everyone’s interests. Consequently, a constraint is added to the model which allows no more than two members of the team for influence and creativity to belong to the same community. The new model that results for the creativity team has an overall pagerank significantly lower. However, the difference for the influence one is not considerably large. Therefore, for the former team the previous option is chosen but for the latter team the new one is preferred.
+Consequently, a constraint was added to the model allowing no more than two members of the team for influence and creativity to belong to the same community. While the cumulative creativity PageRank for the new creativity team was significantly lower, the difference for the new influence team was not as large. Therefore, only the new influence group provided by this revisited model was included in the final model choice to factor in the benefit of cross-cluster representativeness.
 
 ###Final Option
-And below, the plot depicts the result of our final decision for the groups:
+Further to this analysis, the plot below depicts our final choices for the groups:
 
 ```{r echo=FALSE, fig.height = 5.8, fig.align='center'}
 V(g)$color <- "snow2"
@@ -506,7 +508,7 @@ Before we can decide if another method would be better suited we must first expl
 	
 While CS is good measure of someone’s adaptability, we do not agree that it is the best in our case. After exploring other options, we think Jaccard similarity (JS) would be the appropriate method to use. JS divides the intersection of a set by the union of the same set. This method accounts for both the magnitude and angle between vectors. The values of JS are like the CS method, with values ranging between 0 (for differing vectors) and 1 (for similar vectors). 
 
-As in our case not all people have the same number of choices, we think the magnitude of the vector should be integrated as well into our calculations.
+As in our case, not all people have the same number of choices, we think the magnitude of the vector should be integrated as well into our calculations.
 
 #Appendix:
 
